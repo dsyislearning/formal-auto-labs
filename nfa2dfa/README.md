@@ -16,9 +16,9 @@
 
 因为 DFA $D$ 的每个状态对应 NFA $M$ 的一个状态子集，所以构造状态转移矩阵 DTT 时，对给定的输入符号串，使 $D$ “并行地” 模拟 $M$ 所能产生的所有可能的转换。令 $q$ 为 NFA $M$ 的状态， $T$ 为 NFA $M$ 的一个状态子集，引入以下操作
 
-- $\varepsilon\_closure(q)=\{q'\,|\,$ 从 $q$ 出发，经过 $\varepsilon$ 道路可以到达状态 $q'\}$
+- $\varepsilon\_closure(q)=\{q'\,|\,从q出发，经过 \varepsilon 道路可以到达状态q'\}$
 - $\varepsilon\_closure(T)=\bigcup\limits_{i=1}^{n}\varepsilon\_closure(q_i)$，其中 $q_i\in T$，从 $T$ 中任一状态出发，经过 $\varepsilon$ 道路后可以达到的状态集合
-- $move(T,a)=\{q\,|\,\delta(q_i,a)=q,$ 其中 $q_i\in T\}$，即从 $T$ 中状态 $q_i\in T$ 出发，经过输入符号 $a$ 之后可到达的状态集合
+- $move(T,a)=\{q\,|\,\delta(q_i,a)=q,其中q_i\in T\}$，即从 $T$ 中状态 $q_i\in T$ 出发，经过输入符号 $a$ 之后可到达的状态集合
 
 算法描述如下：
 
