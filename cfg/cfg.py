@@ -13,79 +13,13 @@ def main():
 
 # 上下文无关文法变换算法
 def transform_cfg():
-    remove_useless_symbols()
     eliminate_epsilon_production()
     remove_unit_production()
+    remove_useless_symbols()
 
-# 消无用符号
-def remove_useless_symbols():
-    remove_non_generating_symbols()
-    remove_unreachable_symbols()
-
-# 消非生成符号
-def remove_non_generating_symbols():
-    global N, P
-    new_N = set() # 新非终结符集合
-    # 先将所有能够直接生成由终结符组成字符串的非终结符加入集合V
-    for production in P:
-        start = production.split("->")[0]
-        sentence = production.split("->")[1]
-        if sentence.islower():
-            new_N.add(start)
-    # 接下来不断迭代直至找到所有生成符号
-    number = 0
-    while number != len(new_N):
-        number = len(new_N)
-        for production in P:
-            start = production.split("->")[0]
-            sentence = production.split("->")[1]
-            is_generating = True
-            for char in sentence:
-                if char.isupper() and char not in new_N:
-                    is_generating = False
-                    break
-            if is_generating:
-                new_N.add(start)
-    # 删除含有非生成符号的生成式
-    to_be_deleted = set()
-    for production in P:
-        for char in production:
-            if char.isupper() and char in set(N) - new_N:
-                to_be_deleted.add(production)
-    for char in to_be_deleted:
-        P.remove(char)
-    # 更新非终结符集合
-    N = sorted(new_N)
-
-# 消不可达符号
-def remove_unreachable_symbols():
-    global N, T, P
-    new_N = {"S"} # 新非终结符集合
-    new_T = set() # 新终结符集合
-    used_dict = dict.fromkeys(P)
-    # 标记当前所有生成式为未使用过
-    for key in used_dict.keys():
-        used_dict[key] = False
-    # 遍历，找到起始符在新中的生成式
-    for production in P:
-        start = production.split("->")[0]
-        sentence = production.split("->")[1]
-        # 将生成式右边的内容全部加入新的终结符、非终结符集合
-        if start in new_N:
-            for char in sentence:
-                if char.isupper():
-                    new_N.add(char)
-                elif char.islower():
-                    new_T.add(char)
-        # 标记该生成式已使用过
-        used_dict[production] = True
-    # 删除所有未使用过的生成式
-    for production in P:
-        if not used_dict[production]:
-            P.remove(production)
-    # 更新非终结符、终结符集合
-    N = sorted(new_N)
-    T = sorted(new_T)
+###############################################################################
+################################ 消 ε 产生式 ###################################
+###############################################################################
 
 # 消 ε 产生式
 def eliminate_epsilon_production():
@@ -123,15 +57,18 @@ def eliminate_epsilon_production():
         if len(numeber_list) != 0:
             new_sentences = get_combinations(sentence, numeber_list, 0)
             for new_sentence in new_sentences:
-                 # 构造新产生式要先删除临时插入的 ε
-                new_P.add(start + "->" + new_sentence.replace("ε", ""))
+                 # 构造新产生式要先删除临时插入的 ε，但 A->ε 不能加入
+                if new_sentence != "ε":
+                    new_P.add(start + "->" + new_sentence.replace("ε", ""))
             numeber_list.clear()
     # 如果起始符本身就可致空，加入新产生式
     if "S" in V:
-        P.append("S0->S|ε")
+        new_P.add("S0->S")
+        new_P.add("S0->ε")
         N.append("S0")
     # 终结符集合中删除 ε
-    T.remove("ε")
+    if T.count("ε") != 0:
+        T.remove("ε")
     # 更新产生式
     P = sorted(new_P)
 
@@ -152,6 +89,10 @@ def get_combinations(sentence: str, lst: list[int], u: int) -> list[str]:
     new_sentences.extend(get_combinations("".join(res), lst, u + 1)) # 不取
     # 返回最终结果
     return new_sentences
+
+###############################################################################
+################################ 消单产生式 ####################################
+###############################################################################
 
 # 消单产生式
 def remove_unit_production():
@@ -190,6 +131,95 @@ def get_all_unit_productions(productions: list[str]) -> set:
                     Na.add(sentenceB)
                     result.add(startA + "->" + sentenceB)
     return result
+
+###############################################################################
+################################# 消无用符号 ###################################
+###############################################################################
+
+# 消无用符号
+def remove_useless_symbols():
+    remove_non_generating_symbols()
+    remove_unreachable_symbols()
+
+# 消非生成符号
+def remove_non_generating_symbols():
+    global N, P
+    new_N = set() # 新非终结符集合
+    # 先将所有能够直接生成由终结符组成字符串的非终结符加入集合V
+    for production in P:
+        start = production.split("->")[0]
+        sentence = production.split("->")[1]
+        if sentence.islower():
+            new_N.add(start)
+    # 接下来不断迭代直至找到所有生成符号
+    number = 0
+    while number != len(new_N):
+        number = len(new_N)
+        for production in P:
+            start = production.split("->")[0]
+            sentence = production.split("->")[1]
+            is_generating = True
+            for char in sentence:
+                if char.isupper() and char not in new_N:
+                    is_generating = False
+                    break
+            if is_generating:
+                new_N.add(start)
+    # 将可达符号加入新生成式集合
+    to_be_deleted = set()
+    for production in P:
+        for char in production:
+            if char.isupper() and char in set(N) - new_N:
+                to_be_deleted.add(production)
+    for char in to_be_deleted:
+        P.remove(char)
+    # 更新非终结符集合
+    N = sorted(new_N)
+
+# 消不可达符号
+def remove_unreachable_symbols():
+    global N, T, P
+    # 新非终结符集合
+    if "S0" in N:
+        new_N = {"S0"}
+    else:
+        new_N = {"S"}
+    # 新终结符集合
+    new_T = set()
+    # 新产生式集合
+    new_P = set()
+    # 迭代找可达符号集合
+    number = 0
+    while number != len(new_N):
+        number = len(new_N)
+        # 遍历，找到起始符可达的生成式
+        for production in P:
+            start = production.split("->")[0]
+            sentence = production.split("->")[1]
+            # 将生成式右边的内容全部加入新的终结符、非终结符集合
+            if start in new_N:
+                for char in sentence:
+                    if char.isupper():
+                        new_N.add(char)
+                    elif char.islower():
+                        new_T.add(char)
+    # 删除所有未使用过的生成式
+    for production in P:
+        start = production.split("->")[0]
+        sentence = production.split("->")[1]
+        if start in new_N:
+            new_P.add(production)
+    # 终结符不包含 ε
+    if "ε" in new_T:
+        new_T.remove("ε")
+    # 更新非终结符、终结符、生成式集合
+    N = sorted(new_N)
+    T = sorted(new_T)
+    P = sorted(new_P)
+
+###############################################################################
+################################ 文件输入输出 ##################################
+###############################################################################
 
 # 从 in.txt 中读取上下文无关文法
 def input_cfg():
@@ -234,6 +264,16 @@ def split_productions(productions: list[str]) -> list[str]:
 def output_cfg():
     global P
     with open("./cfg/out.txt", "w", encoding="utf-8") as work_data:
+        # 输出非终结符
+        work_data.write("N:\n")
+        work_data.write(", ".join(N))
+        work_data.write("\n\n")
+        # 输出终结符
+        work_data.write("T:\n")
+        work_data.write(", ".join(T))
+        work_data.write("\n\n")
+        # 输出产生式
+        work_data.write("P: \n")
         # 将拆开写的文法合并简写
         productions = wrap_up_productions(P)
         # 将生成式一条条写入输出文件
@@ -268,10 +308,9 @@ def wrap_up_productions(productions: list[str]) -> list[str]:
     # 返回结果
     return result
 
+###############################################################################
+################################ 程序入口 ######################################
+###############################################################################
+
 # 程序入口
 main()
-
-# 调试
-print(N)
-print(T)
-print(P)

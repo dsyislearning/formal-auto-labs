@@ -1,3 +1,10 @@
+N:
+A, B, D, S
+
+T:
+a, b, c, d
+
+P: 
 S->a|aA|b|bA|ccD
 A->abB
 B->a|aA
